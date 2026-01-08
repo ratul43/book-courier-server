@@ -34,6 +34,7 @@ async function run() {
     const db = client.db("BookCourierDB")
     const booksCollection = db.collection("allBooks")
     const latestBooksCollection = db.collection("latestBooks")
+    const ordersCollection = db.collection("allOrders")
 
 
 
@@ -57,6 +58,28 @@ async function run() {
       res.send(result)
     })
 
+    // post the user order books
+    app.post("/orders", async(req, res)=> {
+      const orderData = req.body 
+      const result = await ordersCollection.insertOne(orderData)
+      res.send(result)
+    })
+
+    app.get("/orders", async(req, res)=> {
+      const result = await ordersCollection.find().toArray()
+      res.send(result)
+    })
+
+    // cancel orders api 
+    app.patch("/orders/cancel/:id", async(req, res)=>{
+      const id = req.params.id 
+     
+      const result = await ordersCollection.updateOne(
+        {_id: new ObjectId(id)},
+        {$set: {status: "cancelled"}}
+      )
+      res.send(result)
+    })
 
 
 
