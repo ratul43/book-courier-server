@@ -3,6 +3,7 @@ const app = express()
 const cors = require("cors");
 require("dotenv").config();
 
+const stripe = require('stripe')(process.env.STRIPE_SECRET);
 
 const port = 3000
 app.use(cors())
@@ -81,6 +82,66 @@ async function run() {
       res.send(result)
     })
 
+    // payment related apis
+    app.post('/create-checkout-session', async(req, res)=>{
+      const paymentInfo = req.body 
+      const amount = Number(paymentInfo.totalCost) * 100
+      // console.log(paymentInfo);
+
+      const session = await stripe.checkout.sessions.create({
+    line_items: [
+      {
+
+        price_data:{
+          currency: 'USD',
+          unit_amount: amount,
+          product_data: {
+            name: paymentInfo.bookName
+          }
+        },
+        
+        quantity: 1,
+      },
+    ],
+    customer_email: paymentInfo.customerEmail,
+    mode: 'payment',
+    metadata: {
+      bookId: paymentInfo.bookId,
+    },
+    success_url: `${process.env.SITE_DOMAIN}/dashboard/payment-success?session_id={CHECKOUT_SESSION_ID}`,
+    cancel_url: `${process.env.SITE_DOMAIN}/dashboard/payment-cancelled`,
+  })
+
+  // console.log(session)
+  res.send({url: session.url })
+
+    })
+
+
+    app.patch("/payment-success", async(req, res)=>{
+      const sessionId = req.query.session_id
+      // console.log('session id', sessionId);
+
+      const session = await stripe.checkout.sessions.retrieve(sessionId)
+
+      // console.log('session retrieve', session);
+
+      if(session.payment_status === 'paid'){
+        const id = session.metadata.bookId
+        
+        const query = {_id: new ObjectId(id)}
+        const update = 
+        {$set: {
+            paymentStatus: 'paid',
+            status: 'paid'
+          }
+        }
+        const result = await ordersCollection.updateOne(query, update)
+        // console.log(result);
+        res.send(result)
+      }
+
+    })
 
 
 
