@@ -199,8 +199,18 @@ async function run() {
     })
 
 
+    // get all payment information 
+    app.get("/payments", async(req, res)=>{
+      const result = await paymentCollection.find().toArray()
+      res.send(result)
+    })
 
-
+    // librarian book add 
+    app.post("/librarian/bookAdd", async(req, res) => {
+      const bookData = req.body 
+      const result = await booksCollection.insertOne(bookData)
+      res.send(result)
+    })
 
 
 
