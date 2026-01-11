@@ -212,6 +212,17 @@ async function run() {
       res.send(result)
     })
 
+    // librarian book update
+    app.patch("/librarian/bookUpdate/:id", async(req, res) => {
+      const id = req.params.id 
+      const bookUpdateData = req.body 
+      const result = await booksCollection.updateOne(
+        {_id: new ObjectId(id)},
+        { $set: bookUpdateData}
+      )
+      res.send(result)
+    })
+
 
 
 
