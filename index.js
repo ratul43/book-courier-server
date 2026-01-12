@@ -79,6 +79,18 @@ async function run() {
       res.send(result);
     });
 
+    // delete book api
+    app.delete("/books/delete/:id", async(req, res) => {
+      const {id} = req.params
+      const result = await booksCollection.deleteOne(
+        {_id: new ObjectId(id)}
+      )
+      res.send(result)
+    })
+
+
+
+
     // post the user order books
     app.post("/orders", async (req, res) => {
       const orderData = req.body;
