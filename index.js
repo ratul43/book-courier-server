@@ -44,7 +44,7 @@ async function run() {
     const latestBooksCollection = db.collection("latestBooks");
     const ordersCollection = db.collection("allOrders");
     const paymentCollection = db.collection("payments");
-    const usersCollection = db.collection("users")
+    const usersCollection = db.collection("users");
 
     // Book Related Api
     // get all books data
@@ -63,6 +63,19 @@ async function run() {
     app.get("/allBooks/:id", async (req, res) => {
       const id = req.params.id;
       const result = await booksCollection.findOne({ _id: new ObjectId(id) });
+      res.send(result);
+    });
+
+    // update the book status published or unpublished
+    app.patch("/books/publish/:id", async (req, res) => {
+      const { id } = req.params;
+      const { publishStatus } = req.body;
+
+      const result = await booksCollection.updateOne(
+        { _id: new ObjectId(id) },
+        { $set: { publishStatus } }
+      );
+
       res.send(result);
     });
 
@@ -93,7 +106,7 @@ async function run() {
     app.patch("/orders/:id", async (req, res) => {
       const { id } = req.params;
       const { status } = req.body;
-      
+
       const result = await ordersCollection.updateOne(
         { _id: new ObjectId(id) },
         { $set: { status } }
@@ -103,10 +116,9 @@ async function run() {
     });
 
     // librarian order cancel api
-     app.patch("/orders/librarian/:id", async (req, res) => {
+    app.patch("/orders/librarian/:id", async (req, res) => {
       const { id } = req.params;
-      
-      
+
       const result = await ordersCollection.updateOne(
         { _id: new ObjectId(id) },
         { $set: { status: "cancelled" } }
@@ -114,7 +126,6 @@ async function run() {
 
       res.send(result);
     });
-
 
     // payment related apis
     app.post("/create-checkout-session", async (req, res) => {
@@ -238,52 +249,48 @@ async function run() {
     });
 
     // get all users data
-    app.get("/users", async(req, res) => {
-      const result = await usersCollection.find().toArray()
-      res.send(result)
-    })
-
-
+    app.get("/users", async (req, res) => {
+      const result = await usersCollection.find().toArray();
+      res.send(result);
+    });
 
     // user store related api
-    app.post("/users", async(req, res)=>{
-      const userData = req.body 
-      const result = await usersCollection.insertOne(userData)
-      res.send(result)
-    })
+    app.post("/users", async (req, res) => {
+      const userData = req.body;
+      const result = await usersCollection.insertOne(userData);
+      res.send(result);
+    });
 
-    // user update related api 
-    app.patch("/users", async(req, res)=>{
-      const userData = req.body 
-      const email = req.query.email 
+    // user update related api
+    app.patch("/users", async (req, res) => {
+      const userData = req.body;
+      const email = req.query.email;
       const result = await usersCollection.updateOne(
-        {email: email},
-        {$set: userData}
-      )
-      res.send(result)
-    })
+        { email: email },
+        { $set: userData }
+      );
+      res.send(result);
+    });
 
     // admin make librarian api
-    app.patch("/users/make-librarian", async(req, res)=>{
-      const email = req.query.email 
+    app.patch("/users/make-librarian", async (req, res) => {
+      const email = req.query.email;
       const result = await usersCollection.updateOne(
-        {email: email},
-        {$set: {role: "librarian"}}
-      )
-      res.send(result)
-    })
+        { email: email },
+        { $set: { role: "librarian" } }
+      );
+      res.send(result);
+    });
 
     // admin make admin api
-    app.patch("/users/make-admin", async(req, res)=>{
-      const email = req.query.email 
+    app.patch("/users/make-admin", async (req, res) => {
+      const email = req.query.email;
       const result = await usersCollection.updateOne(
-        {email: email},
-        {$set: {role: "admin"}}
-      )
-      res.send(result)
-    })
-
-
+        { email: email },
+        { $set: { role: "admin" } }
+      );
+      res.send(result);
+    });
 
     // Send a ping to confirm a successful connection
     // await client.db("admin").command({ ping: 1 });
