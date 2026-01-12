@@ -44,6 +44,7 @@ async function run() {
     const latestBooksCollection = db.collection("latestBooks");
     const ordersCollection = db.collection("allOrders");
     const paymentCollection = db.collection("payments");
+    const usersCollection = db.collection("users")
 
     // Book Related Api
     // get all books data
@@ -235,6 +236,62 @@ async function run() {
       );
       res.send(result);
     });
+
+
+    // user store related api
+    app.post("/users", async(req, res)=>{
+      const userData = req.body 
+      const result = await usersCollection.insertOne(userData)
+      res.send(result)
+    })
+
+    // user update related api 
+    app.patch("/users", async(req, res)=>{
+      const userData = req.body 
+      const email = req.query.email 
+      const result = await usersCollection.updateOne(
+        {email: email},
+        {$set: userData}
+      )
+      res.send(result)
+    })
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
     // Send a ping to confirm a successful connection
     // await client.db("admin").command({ ping: 1 });
