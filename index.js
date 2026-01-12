@@ -237,6 +237,13 @@ async function run() {
       res.send(result);
     });
 
+    // get all users data
+    app.get("/users", async(req, res) => {
+      const result = await usersCollection.find().toArray()
+      res.send(result)
+    })
+
+
 
     // user store related api
     app.post("/users", async(req, res)=>{
@@ -255,42 +262,6 @@ async function run() {
       )
       res.send(result)
     })
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 
 
     // Send a ping to confirm a successful connection
