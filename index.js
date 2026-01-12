@@ -101,8 +101,20 @@ async function run() {
       res.send(result);
     });
 
+    // librarian order cancel api
+     app.patch("/orders/librarian/:id", async (req, res) => {
+      const { id } = req.params;
+      
+      
+      const result = await ordersCollection.updateOne(
+        { _id: new ObjectId(id) },
+        { $set: { status: "cancelled" } }
+      );
 
-    
+      res.send(result);
+    });
+
+
     // payment related apis
     app.post("/create-checkout-session", async (req, res) => {
       const paymentInfo = req.body;
