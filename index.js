@@ -263,6 +263,27 @@ async function run() {
       res.send(result)
     })
 
+    // admin make librarian api
+    app.patch("/users/make-librarian", async(req, res)=>{
+      const email = req.query.email 
+      const result = await usersCollection.updateOne(
+        {email: email},
+        {$set: {role: "librarian"}}
+      )
+      res.send(result)
+    })
+
+    // admin make admin api
+    app.patch("/users/make-admin", async(req, res)=>{
+      const email = req.query.email 
+      const result = await usersCollection.updateOne(
+        {email: email},
+        {$set: {role: "admin"}}
+      )
+      res.send(result)
+    })
+
+
 
     // Send a ping to confirm a successful connection
     // await client.db("admin").command({ ping: 1 });
