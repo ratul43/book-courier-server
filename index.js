@@ -42,14 +42,24 @@ async function run() {
     const db = client.db("BookCourierDB");
     const booksCollection = db.collection("allBooks");
     const latestBooksCollection = db.collection("latestBooks");
+    const wishListCollection = db.collection("wishList")
     const ordersCollection = db.collection("allOrders");
     const paymentCollection = db.collection("payments");
     const usersCollection = db.collection("users");
 
     // Book Related Api
-    // get all books data
+
     app.get("/allBooks", async (req, res) => {
       const books = await booksCollection.find().sort({addedOn: -1}).toArray()
+      res.send(books);
+    });
+
+
+
+
+    // get all books data with published
+    app.get("/allBooks/published", async (req, res) => {
+      const books = await booksCollection.find({publishStatus: "published"}).sort({addedOn: -1}).toArray()
       res.send(books);
     });
 
@@ -84,6 +94,14 @@ async function run() {
 
       res.send(result);
     });
+
+    // add book to wishlist api
+    app.post("/allBooks/wishlist", async(req, res)=>{
+      const wishListBookData = req.body
+      const result = await wishListCollection.insertOne(wishListBookData)
+      res.send(result)
+    })
+
 
 
     // post the user order books
