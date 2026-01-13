@@ -79,22 +79,15 @@ async function run() {
       res.send(result);
     });
 
-    // delete book api
-    app.delete("/books/delete/:id", async(req, res) => {
-      const {id} = req.params
-      const result = await booksCollection.deleteOne(
-        {_id: new ObjectId(id)}
-      )
-      res.send(result)
-    })
-
-
-
 
     // post the user order books
     app.post("/orders", async (req, res) => {
       const orderData = req.body;
-      const result = await ordersCollection.insertOne(orderData);
+      const finalOrder = {
+        ...orderData,
+        bookId: new ObjectId(orderData.bookId),
+      };
+      const result = await ordersCollection.insertOne(finalOrder);
       res.send(result);
     });
 
@@ -112,6 +105,30 @@ async function run() {
         { $set: { status: "cancelled" } }
       );
       res.send(result);
+    });
+
+    // order delete tracking api
+    app.delete("/books/delete/:id", async (req, res) => {
+      const { id } = req.params;
+      console.log(id);
+     
+      const bookObjectId = new ObjectId(id);
+
+      // 1️⃣ Delete the book
+      const bookResult = await booksCollection.deleteOne({
+        _id: bookObjectId,
+      });
+
+      // 2️⃣ Delete all related orders
+      const orderResult = await ordersCollection.deleteMany({
+        bookId: bookObjectId,
+      });
+
+      res.send({
+        success: true,
+        deletedBook: bookResult.deletedCount,
+        deletedOrders: orderResult.deletedCount,
+      });
     });
 
     // librarian status update related api
