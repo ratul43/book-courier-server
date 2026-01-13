@@ -98,10 +98,21 @@ async function run() {
     // add book to wishlist api
     app.post("/allBooks/wishlist", async(req, res)=>{
       const wishListBookData = req.body
-      const result = await wishListCollection.insertOne(wishListBookData)
+      const wishListData = {
+        ...wishListBookData,
+        bookId: new ObjectId(wishListBookData.bookId) 
+      }
+
+      const result = await wishListCollection.insertOne(wishListData)
       res.send(result)
+
     })
 
+    // get wishlist book data
+    app.get("/books/wishListed", async(req, res) => {
+      const result = await wishListCollection.find().toArray()
+      res.send(result)
+    })
 
 
     // post the user order books
