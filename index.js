@@ -98,7 +98,7 @@ async function run() {
     });
 
     app.get("/orders", async (req, res) => {
-      const result = await ordersCollection.find().toArray();
+      const result = await ordersCollection.find().sort({orderDate: -1}).toArray();
       res.send(result);
     });
 
@@ -261,7 +261,7 @@ async function run() {
 
     // get all payment information
     app.get("/payments", async (req, res) => {
-      const result = await paymentCollection.find().toArray();
+      const result = await paymentCollection.find().sort({paidAt: -1}).toArray();
       res.send(result);
     });
 
