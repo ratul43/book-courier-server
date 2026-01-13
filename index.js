@@ -49,9 +49,15 @@ async function run() {
     // Book Related Api
     // get all books data
     app.get("/allBooks", async (req, res) => {
-      const books = await booksCollection.find().toArray();
+      const books = await booksCollection.find().sort({addedOn: -1}).toArray()
       res.send(books);
     });
+
+    app.get("/latestBooks", async(req, res)=>{
+      const latestBooks = await booksCollection.find().sort({addedOn: -1}).limit(7).toArray()
+      res.send(latestBooks)
+    })
+
 
     app.post("/addBooks", async (req, res) => {
       const bookData = req.body;
