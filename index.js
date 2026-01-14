@@ -109,6 +109,15 @@ async function run() {
       res.send(result)
     })
 
+    // books sorting api
+    app.get("/books/sorting", async(req, res)=>{
+      const {sort, order} = req.query
+      const sortOption = {}
+      sortOption[sort || undefined] = order === "asc" ? 1 : -1 
+      console.log(sortOption);
+      const books = await booksCollection.find().sort(sortOption, {publishStatus: "published"}).toArray()
+      res.send(books)
+    })
 
     // post the user order books
     app.post("/orders", async (req, res) => {
