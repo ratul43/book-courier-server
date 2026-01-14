@@ -114,8 +114,8 @@ async function run() {
       const {sort, order} = req.query
       const sortOption = {}
       sortOption[sort || undefined] = order === "asc" ? 1 : -1 
-      console.log(sortOption);
-      const books = await booksCollection.find().sort(sortOption, {publishStatus: "published"}).toArray()
+      
+      const books = await booksCollection.find({publishStatus: "published"}).sort(sortOption).toArray()
       res.send(books)
     })
 
