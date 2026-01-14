@@ -41,11 +41,11 @@ async function run() {
     // build api for data collection
     const db = client.db("BookCourierDB");
     const booksCollection = db.collection("allBooks");
-    const latestBooksCollection = db.collection("latestBooks");
     const wishListCollection = db.collection("wishList")
     const ordersCollection = db.collection("allOrders");
     const paymentCollection = db.collection("payments");
     const usersCollection = db.collection("users");
+    const reviewsCollection = db.collection("reviews")
 
     // Book Related Api
 
@@ -62,11 +62,6 @@ async function run() {
       const books = await booksCollection.find({publishStatus: "published"}).sort({addedOn: -1}).toArray()
       res.send(books);
     });
-
-    app.get("/latestBooks", async(req, res)=>{
-      const latestBooks = await booksCollection.find().sort({addedOn: -1}).limit(7).toArray()
-      res.send(latestBooks)
-    })
 
 
     app.post("/addBooks", async (req, res) => {
@@ -190,6 +185,60 @@ async function run() {
 
       res.send(result);
     });
+
+    // user review related api
+  app.post("/reviews", async (req, res) => {
+  const reviewData = req.body;
+
+  const result = await reviewsCollection.insertOne(
+    {
+      ...reviewData,
+      bookId: new ObjectId(reviewData.bookId)
+
+    });
+
+  res.send({
+    _id: result.insertedId,
+    ...reviewData
+  });
+});
+
+  // update user name and image while update in the profile page
+  app.patch("/comment/user/update", async(req, res)=>{
+    const {email} = req.query 
+    const updatedData = req.body
+    console.log(updatedData);
+    
+    const result = await reviewsCollection.updateMany(
+      {userEmail: email},
+      {$set:{
+        userName: updatedData.userName,
+        userPhoto: updatedData.userPhoto 
+      }}
+    )
+    res.send(result)
+  })
+
+    // user reviews
+    app.get("/reviews", async(req, res)=> {
+      const {bookId} = req.query
+      const data = await reviewsCollection.find({bookId: new ObjectId(bookId)}).sort({createdAt: -1}).toArray()
+      res.send(data)
+    })
+
+    // user validation for orders
+    app.get("/orderValidate", async(req,res) => {
+      const {email} = req.query
+      const result = await ordersCollection.findOne(
+        {Email: email}  
+      )
+      res.send(result)
+    })
+
+
+
+
+
 
     // payment related apis
     app.post("/create-checkout-session", async (req, res) => {
