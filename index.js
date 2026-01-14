@@ -111,11 +111,20 @@ async function run() {
 
     // books sorting api
     app.get("/books/sorting", async(req, res)=>{
-      const {sort, order} = req.query
-      const sortOption = {}
-      sortOption[sort || undefined] = order === "asc" ? 1 : -1 
+      const {sort, order, search} = req.query
       
+      const sortOption = {}
+
+      // const query = {}
+      // if(search){
+      //   query.title = {name: {$regex: search, $options: "i"}}
+      // }
+  
+      sortOption[sort || "addedOn"] = order === "asc" ? 1 : -1 
+      console.log(sortOption);
       const books = await booksCollection.find({publishStatus: "published"}).sort(sortOption).toArray()
+     
+
       res.send(books)
     })
 
