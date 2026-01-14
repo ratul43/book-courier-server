@@ -150,6 +150,29 @@ async function run() {
       res.send(result);
     });
 
+   app.get("/order/userValidation", async (req, res) => {
+  const { email, bookId } = req.query;
+
+  if (!email || !bookId) {
+    return res.send({ canReview: false });
+  }
+
+  const order = await ordersCollection.findOne({
+    Email: email,
+    bookId: new ObjectId(bookId),
+   
+  });
+
+  if (order) {
+    res.send({ canReview: true });
+  } else {
+    res.send({ canReview: false });
+  }
+});
+
+
+
+
     // user cancel orders api
     app.patch("/orders/cancel/:id", async (req, res) => {
       const id = req.params.id;
