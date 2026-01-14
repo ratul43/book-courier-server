@@ -41,28 +41,30 @@ async function run() {
     // build api for data collection
     const db = client.db("BookCourierDB");
     const booksCollection = db.collection("allBooks");
-    const wishListCollection = db.collection("wishList")
+    const wishListCollection = db.collection("wishList");
     const ordersCollection = db.collection("allOrders");
     const paymentCollection = db.collection("payments");
     const usersCollection = db.collection("users");
-    const reviewsCollection = db.collection("reviews")
+    const reviewsCollection = db.collection("reviews");
 
     // Book Related Api
 
     app.get("/allBooks", async (req, res) => {
-      const books = await booksCollection.find().sort({addedOn: -1}).toArray()
+      const books = await booksCollection
+        .find()
+        .sort({ addedOn: -1 })
+        .toArray();
       res.send(books);
     });
-
-
-
 
     // get all books data with published
     app.get("/allBooks/published", async (req, res) => {
-      const books = await booksCollection.find({publishStatus: "published"}).sort({addedOn: -1}).toArray()
+      const books = await booksCollection
+        .find({ publishStatus: "published" })
+        .sort({ addedOn: -1 })
+        .toArray();
       res.send(books);
     });
-
 
     app.post("/addBooks", async (req, res) => {
       const bookData = req.body;
@@ -91,42 +93,43 @@ async function run() {
     });
 
     // add book to wishlist api
-    app.post("/allBooks/wishlist", async(req, res)=>{
-      const wishListBookData = req.body
+    app.post("/allBooks/wishlist", async (req, res) => {
+      const wishListBookData = req.body;
       const wishListData = {
         ...wishListBookData,
-        bookId: new ObjectId(wishListBookData.bookId) 
-      }
+        bookId: new ObjectId(wishListBookData.bookId),
+      };
 
-      const result = await wishListCollection.insertOne(wishListData)
-      res.send(result)
-
-    })
+      const result = await wishListCollection.insertOne(wishListData);
+      res.send(result);
+    });
 
     // get wishlist book data
-    app.get("/books/wishListed", async(req, res) => {
-      const result = await wishListCollection.find().toArray()
-      res.send(result)
-    })
+    app.get("/books/wishListed", async (req, res) => {
+      const result = await wishListCollection.find().toArray();
+      res.send(result);
+    });
 
     // books sorting api
-    app.get("/books/sorting", async(req, res)=>{
-      const {sort, order, search} = req.query
-      
-      const sortOption = {}
+    app.get("/books/sorting", async (req, res) => {
+      const { sort, order, search } = req.query;
 
-      // const query = {}
-      // if(search){
-      //   query.title = {name: {$regex: search, $options: "i"}}
-      // }
-  
-      sortOption[sort || "addedOn"] = order === "asc" ? 1 : -1 
-      console.log(sortOption);
-      const books = await booksCollection.find({publishStatus: "published"}).sort(sortOption).toArray()
-     
+      let query = { publishStatus: "published" };
 
-      res.send(books)
-    })
+      if (search) {
+        query.name = { $regex: search, $options: "i" };
+      }
+
+      const sortOption = {};
+      sortOption[sort || "addedOn"] = order === "asc" ? 1 : -1;
+
+      const books = await booksCollection
+        .find(query)
+        .sort(sortOption)
+        .toArray();
+
+      res.send(books);
+    });
 
     // post the user order books
     app.post("/orders", async (req, res) => {
@@ -140,7 +143,10 @@ async function run() {
     });
 
     app.get("/orders", async (req, res) => {
-      const result = await ordersCollection.find().sort({orderDate: -1}).toArray();
+      const result = await ordersCollection
+        .find()
+        .sort({ orderDate: -1 })
+        .toArray();
       res.send(result);
     });
 
@@ -159,7 +165,7 @@ async function run() {
     app.delete("/books/delete/:id", async (req, res) => {
       const { id } = req.params;
       console.log(id);
-     
+
       const bookObjectId = new ObjectId(id);
 
       // 1️⃣ Delete the book
@@ -205,58 +211,54 @@ async function run() {
     });
 
     // user review related api
-  app.post("/reviews", async (req, res) => {
-  const reviewData = req.body;
+    app.post("/reviews", async (req, res) => {
+      const reviewData = req.body;
 
-  const result = await reviewsCollection.insertOne(
-    {
-      ...reviewData,
-      bookId: new ObjectId(reviewData.bookId)
+      const result = await reviewsCollection.insertOne({
+        ...reviewData,
+        bookId: new ObjectId(reviewData.bookId),
+      });
 
+      res.send({
+        _id: result.insertedId,
+        ...reviewData,
+      });
     });
 
-  res.send({
-    _id: result.insertedId,
-    ...reviewData
-  });
-});
+    // update user name and image while update in the profile page
+    app.patch("/comment/user/update", async (req, res) => {
+      const { email } = req.query;
+      const updatedData = req.body;
+      console.log(updatedData);
 
-  // update user name and image while update in the profile page
-  app.patch("/comment/user/update", async(req, res)=>{
-    const {email} = req.query 
-    const updatedData = req.body
-    console.log(updatedData);
-    
-    const result = await reviewsCollection.updateMany(
-      {userEmail: email},
-      {$set:{
-        userName: updatedData.userName,
-        userPhoto: updatedData.userPhoto 
-      }}
-    )
-    res.send(result)
-  })
+      const result = await reviewsCollection.updateMany(
+        { userEmail: email },
+        {
+          $set: {
+            userName: updatedData.userName,
+            userPhoto: updatedData.userPhoto,
+          },
+        }
+      );
+      res.send(result);
+    });
 
     // user reviews
-    app.get("/reviews", async(req, res)=> {
-      const {bookId} = req.query
-      const data = await reviewsCollection.find({bookId: new ObjectId(bookId)}).sort({createdAt: -1}).toArray()
-      res.send(data)
-    })
+    app.get("/reviews", async (req, res) => {
+      const { bookId } = req.query;
+      const data = await reviewsCollection
+        .find({ bookId: new ObjectId(bookId) })
+        .sort({ createdAt: -1 })
+        .toArray();
+      res.send(data);
+    });
 
     // user validation for orders
-    app.get("/orderValidate", async(req,res) => {
-      const {email} = req.query
-      const result = await ordersCollection.findOne(
-        {Email: email}  
-      )
-      res.send(result)
-    })
-
-
-
-
-
+    app.get("/orderValidate", async (req, res) => {
+      const { email } = req.query;
+      const result = await ordersCollection.findOne({ Email: email });
+      res.send(result);
+    });
 
     // payment related apis
     app.post("/create-checkout-session", async (req, res) => {
@@ -357,7 +359,10 @@ async function run() {
 
     // get all payment information
     app.get("/payments", async (req, res) => {
-      const result = await paymentCollection.find().sort({paidAt: -1}).toArray();
+      const result = await paymentCollection
+        .find()
+        .sort({ paidAt: -1 })
+        .toArray();
       res.send(result);
     });
 
