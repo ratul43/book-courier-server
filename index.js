@@ -414,6 +414,16 @@ async function run() {
       res.send(result);
     });
 
+    // get all payment information by user email
+    app.get("/payments/user", async (req, res) => {
+      const {email} = req.query
+      const result = await paymentCollection
+        .find({customerEmail: email})
+        .sort({ paidAt: -1 })
+        .toArray();
+      res.send(result);
+    });
+
     // librarian book add
     app.post("/librarian/bookAdd", async (req, res) => {
       const bookData = req.body;
