@@ -3,6 +3,19 @@ const app = express();
 const cors = require("cors");
 require("dotenv").config();
 
+// firebase admin verification
+
+const admin = require("firebase-admin");
+
+const decoded = Buffer.from(process.env.FB_SERVICE_KEY, "base64").toString(
+  "utf8"
+);
+const serviceAccount = JSON.parse(decoded);
+
+admin.initializeApp({
+  credential: admin.credential.cert(serviceAccount),
+});
+
 const stripe = require("stripe")(process.env.STRIPE_SECRET);
 
 const port = 3000;
@@ -18,6 +31,27 @@ function generateTrackingId() {
 
 app.use(cors());
 app.use(express.json());
+
+const verifyFBToken = async (req, res, next) => {
+  const token = req.headers?.authorization;
+  console.log(token);
+
+  if (!token) {
+    return res.status(401).send({ message: "unauthorized access" });
+  }
+
+  try {
+    const idToken = token.split(" ")[1];
+    const decoded = await admin.auth().verifyIdToken(idToken);
+    req.decoded_email = decoded.email;
+    // console.log('verify the token',decoded);
+  } catch (err) {
+    return res.status(401).send({ message: "unauthorized access" });
+  }
+
+  // console.log('headers in the middleware', req.headers.authorization);
+  next();
+};
 
 // DataBase Configuration
 
@@ -47,6 +81,32 @@ async function run() {
     const usersCollection = db.collection("users");
     const reviewsCollection = db.collection("reviews");
 
+    // middleware with database access
+    // admin check middleware before admin activity
+    // must be used after verify Firebase Token
+    const verifyAdmin = async (req, res, next) => {
+      const email = req.decoded_email;
+      const query = { email };
+      const user = await usersCollection.findOne(query);
+
+      if (!user || user.role !== "admin") {
+        return res.status(403).send({ message: "Forbidden access" });
+      }
+
+      next();
+    };
+
+    const verifyLibrarianAdmin = async (req, res, next) => {
+      const email = req.decoded_email;
+      const query = { email };
+      const user = await usersCollection.findOne(query);
+
+      if (user.role === "librarian" || user.role === "admin") {
+        res.status(200)
+      }
+      next()
+    }
+
     // Book Related Api
 
     app.get("/allBooks", async (req, res) => {
@@ -73,7 +133,7 @@ async function run() {
     });
 
     // get a book information
-    app.get("/allBooks/:id", async (req, res) => {
+    app.get("/allBooks/:id", verifyFBToken, async (req, res) => {
       const id = req.params.id;
       const result = await booksCollection.findOne({ _id: new ObjectId(id) });
       res.send(result);
@@ -92,12 +152,12 @@ async function run() {
       res.send(result);
     });
 
-    // get a user role 
-    app.get("/users/role", async(req, res) => {
-      const {email} = req.query
-      const result = await usersCollection.findOne({email: email})
-      res.send(result)
-    })
+    // get a user role
+    app.get("/users/role", async (req, res) => {
+      const { email } = req.query;
+      const result = await usersCollection.findOne({ email: email });
+      res.send(result);
+    });
 
     // add book to wishlist api
     app.post("/allBooks/wishlist", async (req, res) => {
@@ -117,33 +177,41 @@ async function run() {
       res.send(result);
     });
 
-    // get wishlist book data by email 
-     app.get("/books/wishListed/user", async (req, res) => {
-      const {email} = req.query
-      const result = await wishListCollection.find({email: email}).toArray();
+    // get wishlist book data by email
+    app.get("/books/wishListed/user", verifyFBToken, async (req, res) => {
+      const { email } = req.query;
+      if(email !== req.decoded_email){
+        return res.status(403).send({message: "Forbidden"})
+      }
+      const result = await wishListCollection.find({ email: email }).toArray();
       res.send(result);
     });
 
-    // books sorting api
-    app.get("/books/sorting", async (req, res) => {
-      const { sort, order, search } = req.query;
+   app.get("/books/sorting", async (req, res) => {
+  const { sort, order, search } = req.query;
 
-      let query = { publishStatus: "published" };
+  const query = { publishStatus: "published" };
 
-      if (search) {
-        query.name = { $regex: search, $options: "i" };
-      }
+  if (search) {
+    query.name = { $regex: search, $options: "i" };
+  }
 
-      const sortOption = {};
-      sortOption[sort || "addedOn"] = order === "asc" ? 1 : -1;
+  let sortOption = {};
 
-      const books = await booksCollection
-        .find(query)
-        .sort(sortOption)
-        .toArray();
+  if (sort && order) {
+    sortOption[sort] = order === "asc" ? 1 : -1;
+  } else {
+    sortOption.addedOn = -1; // newest books first
+  }
 
-      res.send(books);
-    });
+  const books = await booksCollection
+    .find(query)
+    .sort(sortOption)
+    .toArray();
+
+  res.send(books);
+});
+
 
     // post the user order books
     app.post("/orders", async (req, res) => {
@@ -156,16 +224,20 @@ async function run() {
       res.send(result);
     });
 
-    // get user order data 
-    app.get("/orders/user", async (req, res) => {
-      const {email} = req.query
+    // get user order data
+    app.get("/orders/user", verifyFBToken, async (req, res) => {
+      const { email } = req.query;
+
+      if (email !== req.decoded_email) {
+        return res.status(403).send({ message: "forbidden access" });
+      }
+
       const result = await ordersCollection
-        .find({Email: email})
+        .find({ Email: email })
         .sort({ orderDate: -1 })
         .toArray();
       res.send(result);
     });
-
 
     app.get("/orders", async (req, res) => {
       const result = await ordersCollection
@@ -175,28 +247,24 @@ async function run() {
       res.send(result);
     });
 
-   app.get("/order/userValidation", async (req, res) => {
-  const { email, bookId } = req.query;
+    app.get("/order/userValidation", async (req, res) => {
+      const { email, bookId } = req.query;
 
-  if (!email || !bookId) {
-    return res.send({ canReview: false });
-  }
+      if (!email || !bookId) {
+        return res.send({ canReview: false });
+      }
 
-  const order = await ordersCollection.findOne({
-    Email: email,
-    bookId: new ObjectId(bookId),
-   
-  });
+      const order = await ordersCollection.findOne({
+        Email: email,
+        bookId: new ObjectId(bookId),
+      });
 
-  if (order) {
-    res.send({ canReview: true });
-  } else {
-    res.send({ canReview: false });
-  }
-});
-
-
-
+      if (order) {
+        res.send({ canReview: true });
+      } else {
+        res.send({ canReview: false });
+      }
+    });
 
     // user cancel orders api
     app.patch("/orders/cancel/:id", async (req, res) => {
@@ -415,17 +483,20 @@ async function run() {
     });
 
     // get all payment information by user email
-    app.get("/payments/user", async (req, res) => {
-      const {email} = req.query
+    app.get("/payments/user", verifyFBToken, async (req, res) => {
+      const { email } = req.query;
+      if(email !== req.decoded_email){
+        return res.status(403).send({message: "Unauthorized access"})
+      }
       const result = await paymentCollection
-        .find({customerEmail: email})
+        .find({ customerEmail: email })
         .sort({ paidAt: -1 })
         .toArray();
       res.send(result);
     });
 
     // librarian book add
-    app.post("/librarian/bookAdd", async (req, res) => {
+    app.post("/librarian/bookAdd", verifyFBToken, verifyLibrarianAdmin, async (req, res) => {
       const bookData = req.body;
       const result = await booksCollection.insertOne(bookData);
       res.send(result);
@@ -456,7 +527,7 @@ async function run() {
     });
 
     // user update related api
-    app.patch("/users", async (req, res) => {
+    app.patch("/users", verifyFBToken, async (req, res) => {
       const userData = req.body;
       const email = req.query.email;
       const result = await usersCollection.updateOne(
@@ -467,30 +538,40 @@ async function run() {
     });
 
     // admin make librarian api
-    app.patch("/users/make-librarian", async (req, res) => {
-      const email = req.query.email;
-      const result = await usersCollection.updateOne(
-        { email: email },
-        { $set: { role: "librarian" } }
-      );
-      res.send(result);
-    });
+    app.patch(
+      "/users/make-librarian",
+      verifyFBToken,
+      verifyAdmin,
+      async (req, res) => {
+        const email = req.query.email;
+        const result = await usersCollection.updateOne(
+          { email: email },
+          { $set: { role: "librarian" } }
+        );
+        res.send(result);
+      }
+    );
 
     // admin make admin api
-    app.patch("/users/make-admin", async (req, res) => {
-      const email = req.query.email;
-      const result = await usersCollection.updateOne(
-        { email: email },
-        { $set: { role: "admin" } }
-      );
-      res.send(result);
-    });
+    app.patch(
+      "/users/make-admin",
+      verifyFBToken,
+      verifyAdmin,
+      async (req, res) => {
+        const email = req.query.email;
+        const result = await usersCollection.updateOne(
+          { email: email },
+          { $set: { role: "admin" } }
+        );
+        res.send(result);
+      }
+    );
 
     // Send a ping to confirm a successful connection
     // await client.db("admin").command({ ping: 1 });
-    console.log(
-      "Pinged your deployment. You successfully connected to MongoDB!"
-    );
+    // console.log(
+    //   "Pinged your deployment. You successfully connected to MongoDB!"
+    // );
   } finally {
     // Ensures that the client will close when you finish/error
     // await client.close();
