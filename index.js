@@ -92,6 +92,13 @@ async function run() {
       res.send(result);
     });
 
+    // get a user role 
+    app.get("/users/role", async(req, res) => {
+      const {email} = req.query
+      const result = await usersCollection.findOne({email: email})
+      res.send(result)
+    })
+
     // add book to wishlist api
     app.post("/allBooks/wishlist", async (req, res) => {
       const wishListBookData = req.body;
@@ -107,6 +114,13 @@ async function run() {
     // get wishlist book data
     app.get("/books/wishListed", async (req, res) => {
       const result = await wishListCollection.find().toArray();
+      res.send(result);
+    });
+
+    // get wishlist book data by email 
+     app.get("/books/wishListed/user", async (req, res) => {
+      const {email} = req.query
+      const result = await wishListCollection.find({email: email}).toArray();
       res.send(result);
     });
 
@@ -141,6 +155,17 @@ async function run() {
       const result = await ordersCollection.insertOne(finalOrder);
       res.send(result);
     });
+
+    // get user order data 
+    app.get("/orders/user", async (req, res) => {
+      const {email} = req.query
+      const result = await ordersCollection
+        .find({Email: email})
+        .sort({ orderDate: -1 })
+        .toArray();
+      res.send(result);
+    });
+
 
     app.get("/orders", async (req, res) => {
       const result = await ordersCollection
