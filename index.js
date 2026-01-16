@@ -140,7 +140,7 @@ async function run() {
     });
 
     // update the book status published or unpublished
-    app.patch("/books/publish/:id", async (req, res) => {
+    app.patch("/books/publish/:id", verifyFBToken, verifyAdmin, async (req, res) => {
       const { id } = req.params;
       const { publishStatus } = req.body;
 
@@ -201,7 +201,7 @@ async function run() {
   if (sort && order) {
     sortOption[sort] = order === "asc" ? 1 : -1;
   } else {
-    sortOption.addedOn = -1; // newest books first
+    sortOption.addedOn = -1; 
   }
 
   const books = await booksCollection
@@ -214,7 +214,7 @@ async function run() {
 
 
     // post the user order books
-    app.post("/orders", async (req, res) => {
+    app.post("/orders", verifyFBToken, async (req, res) => {
       const orderData = req.body;
       const finalOrder = {
         ...orderData,
@@ -239,7 +239,7 @@ async function run() {
       res.send(result);
     });
 
-    app.get("/orders", async (req, res) => {
+    app.get("/orders", verifyFBToken, verifyLibrarianAdmin, async (req, res) => {
       const result = await ordersCollection
         .find()
         .sort({ orderDate: -1 })
@@ -278,9 +278,8 @@ async function run() {
     });
 
     // order delete tracking api
-    app.delete("/books/delete/:id", async (req, res) => {
+    app.delete("/books/delete/:id", verifyFBToken, verifyAdmin, async (req, res) => {
       const { id } = req.params;
-      console.log(id);
 
       const bookObjectId = new ObjectId(id);
 
@@ -302,7 +301,7 @@ async function run() {
     });
 
     // librarian status update related api
-    app.patch("/orders/:id", async (req, res) => {
+    app.patch("/orders/:id", verifyFBToken, verifyLibrarianAdmin, async (req, res) => {
       const { id } = req.params;
       const { status } = req.body;
 
@@ -503,7 +502,7 @@ async function run() {
     });
 
     // librarian book update
-    app.patch("/librarian/bookUpdate/:id", async (req, res) => {
+    app.patch("/librarian/bookUpdate/:id", verifyFBToken, verifyLibrarianAdmin, async (req, res) => {
       const id = req.params.id;
       const bookUpdateData = req.body;
       const result = await booksCollection.updateOne(
